@@ -5,7 +5,7 @@ import { config } from '../config/env.js';
 
 export interface JWTPayload {
   userId: number;
-  email: string;
+  username: string;
   role: string;
   companyId?: number | null;
 }
@@ -21,7 +21,7 @@ export interface TokenPair {
 export const generateAccessToken = (user: User): string => {
   const payload: JWTPayload = {
     userId: user.id,
-    email: user.email,
+    username: user.username,
     role: user.role,
     companyId: user.companyId
   };
@@ -41,7 +41,7 @@ export const generateAccessToken = (user: User): string => {
 export const generateRefreshToken = (user: User): string => {
   const payload: JWTPayload = {
     userId: user.id,
-    email: user.email,
+    username: user.username,
     role: user.role,
     companyId: user.companyId
   };

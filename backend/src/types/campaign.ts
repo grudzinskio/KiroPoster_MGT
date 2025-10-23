@@ -69,4 +69,24 @@ export interface CampaignFilters {
   search?: string;
   startDate?: Date;
   endDate?: Date;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+export interface CampaignProgress {
+  totalImages: number;
+  approvedImages: number;
+  rejectedImages: number;
+  pendingImages: number;
+  progressPercentage: number;
+  assignedContractors: number;
+}
+
+export interface PaginatedCampaignsResponse {
+  campaigns: Campaign[];
+  total: number;
+  page: number;
+  totalPages: number;
 }

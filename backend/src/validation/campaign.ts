@@ -158,6 +158,22 @@ export const campaignFiltersSchema = Joi.object({
       'date.base': 'End date must be a valid date'
     }),
   
+  sortBy: Joi.string()
+    .valid('name', 'status', 'start_date', 'end_date', 'created_at', 'updated_at')
+    .optional()
+    .default('created_at')
+    .messages({
+      'any.only': 'Sort field must be one of: name, status, start_date, end_date, created_at, updated_at'
+    }),
+  
+  sortOrder: Joi.string()
+    .valid('asc', 'desc')
+    .optional()
+    .default('desc')
+    .messages({
+      'any.only': 'Sort order must be either asc or desc'
+    }),
+  
   page: Joi.number()
     .integer()
     .min(1)

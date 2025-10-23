@@ -4,12 +4,16 @@ import Joi from 'joi';
  * Login validation schema
  */
 export const loginSchema = Joi.object({
-  email: Joi.string()
-    .email()
+  username: Joi.string()
+    .min(3)
+    .max(30)
+    .pattern(/^[a-zA-Z0-9_-]+$/)
     .required()
     .messages({
-      'string.email': 'Please provide a valid email address',
-      'any.required': 'Email is required'
+      'string.min': 'Username must be at least 3 characters long',
+      'string.max': 'Username must be no more than 30 characters long',
+      'string.pattern.base': 'Username must contain only letters, numbers, underscores, and hyphens',
+      'any.required': 'Username is required'
     }),
   password: Joi.string()
     .min(1)
@@ -24,12 +28,16 @@ export const loginSchema = Joi.object({
  * User creation validation schema
  */
 export const createUserSchema = Joi.object({
-  email: Joi.string()
-    .email()
+  username: Joi.string()
+    .min(3)
+    .max(30)
+    .pattern(/^[a-zA-Z0-9_-]+$/)
     .required()
     .messages({
-      'string.email': 'Please provide a valid email address',
-      'any.required': 'Email is required'
+      'string.min': 'Username must be at least 3 characters long',
+      'string.max': 'Username must be no more than 30 characters long',
+      'string.pattern.base': 'Username must contain only letters, numbers, underscores, and hyphens',
+      'any.required': 'Username is required'
     }),
   password: Joi.string()
     .min(8)
@@ -81,11 +89,15 @@ export const createUserSchema = Joi.object({
  * User update validation schema
  */
 export const updateUserSchema = Joi.object({
-  email: Joi.string()
-    .email()
+  username: Joi.string()
+    .min(3)
+    .max(30)
+    .pattern(/^[a-zA-Z0-9_-]+$/)
     .optional()
     .messages({
-      'string.email': 'Please provide a valid email address'
+      'string.min': 'Username must be at least 3 characters long',
+      'string.max': 'Username must be no more than 30 characters long',
+      'string.pattern.base': 'Username must contain only letters, numbers, underscores, and hyphens'
     }),
   firstName: Joi.string()
     .trim()
@@ -154,3 +166,4 @@ export const refreshTokenSchema = Joi.object({
       'any.required': 'Refresh token is required'
     })
 });
+

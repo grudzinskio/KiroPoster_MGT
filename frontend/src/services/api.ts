@@ -31,12 +31,13 @@ class ApiService {
       (error: any) => Promise.reject(error)
     );
 
-    // Response interceptor to handle token refresh
+    // Response interceptor to handle token refresh and errors
     this.api.interceptors.response.use(
       (response: any) => response,
       async (error: any) => {
         const originalRequest = error.config;
 
+        // Handle 401 errors with token refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
@@ -50,6 +51,22 @@ class ApiService {
             window.location.href = '/login';
             return Promise.reject(refreshError);
           }
+        }
+
+        // Handle network errors
+        if (!error.response) {
+          error.isNetworkError = true;
+          error.userMessage = 'Network error. Please check your connection and try again.';
+        }
+
+        // Handle server errors
+        if (error.response?.status >= 500) {
+          error.userMessage = 'Server error. Please try again later.';
+        }
+
+        // Handle rate limiting
+        if (error.response?.status === 429) {
+          error.userMessage = 'Too many requests. Please wait a moment and try again.';
         }
 
         return Promise.reject(error);

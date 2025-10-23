@@ -27,8 +27,8 @@ This poster management system is designed for companies that manage poster adver
 2. WHEN a company employee views client companies THEN the system SHALL display active campaigns and associated users
 3. WHEN a company employee updates client information THEN the system SHALL validate changes and update related campaigns
 4. WHEN a company employee deactivates a client company THEN the system SHALL handle existing campaigns appropriately
-### Requ
-irement 3
+
+### Requirement 3
 
 **User Story:** As a company employee, I want to manage campaigns for all clients, so that I can oversee the entire poster installation process.
 
@@ -59,8 +59,9 @@ irement 3
 1. WHEN a client user logs in THEN the system SHALL display only campaigns associated with their company
 2. WHEN a client user views current campaigns THEN the system SHALL show real-time progress and uploaded images
 3. WHEN a client user views completed campaigns THEN the system SHALL show campaigns completed within the last month
-4. IF a campaign was completed more than 1 month ago THEN the system SHALL NOT display it to client users##
-# Requirement 6
+4. IF a campaign was completed more than 1 month ago THEN the system SHALL NOT display it to client users
+
+### Requirement 6
 
 **User Story:** As a contractor, I want to upload images for assigned campaigns, so that I can provide proof of poster installation.
 
@@ -91,8 +92,9 @@ irement 3
 1. WHEN user data is transmitted THEN the system SHALL use encrypted connections
 2. WHEN passwords are stored THEN the system SHALL use secure hashing algorithms
 3. WHEN file uploads occur THEN the system SHALL validate file types and scan for security threats
-4. WHEN data is accessed THEN the system SHALL log access attempts for audit purposes### Req
-uirement 9
+4. WHEN data is accessed THEN the system SHALL log access attempts for audit purposes
+
+### Requirement 9
 
 **User Story:** As a system operator, I want persistent data storage, so that all information is reliably maintained.
 

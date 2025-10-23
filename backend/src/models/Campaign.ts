@@ -75,7 +75,7 @@ export class CampaignModel {
   }
 
   /**
-   * Get all campaigns with optional filtering
+   * Get all campaigns with optional filtering, sorting, and pagination
    */
   static async findAll(filters?: {
     status?: string;
@@ -85,20 +85,26 @@ export class CampaignModel {
     search?: string;
     startDate?: Date;
     endDate?: Date;
-  }): Promise<Campaign[]> {
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    limit?: number;
+  }): Promise<{ campaigns: Campaign[]; total: number; page: number; totalPages: number }> {
     try {
-      let query = db(this.TABLE_NAME);
+      let query = db(this.TABLE_NAME)
+        .leftJoin('companies', 'campaigns.company_id', 'companies.id');
 
+      // Apply filters
       if (filters?.status) {
-        query = query.where('status', filters.status);
+        query = query.where('campaigns.status', filters.status);
       }
 
       if (filters?.companyId) {
-        query = query.where('company_id', filters.companyId);
+        query = query.where('campaigns.company_id', filters.companyId);
       }
 
       if (filters?.createdBy) {
-        query = query.where('created_by', filters.createdBy);
+        query = query.where('campaigns.created_by', filters.createdBy);
       }
 
       if (filters?.assignedTo) {
@@ -110,23 +116,57 @@ export class CampaignModel {
       if (filters?.search) {
         const searchTerm = `%${filters.search}%`;
         query = query.where(function() {
-          this.where('name', 'like', searchTerm)
-            .orWhere('description', 'like', searchTerm);
+          this.where('campaigns.name', 'like', searchTerm)
+            .orWhere('campaigns.description', 'like', searchTerm)
+            .orWhere('companies.name', 'like', searchTerm);
         });
       }
 
       if (filters?.startDate) {
-        query = query.where('start_date', '>=', filters.startDate);
+        query = query.where('campaigns.start_date', '>=', filters.startDate);
       }
 
       if (filters?.endDate) {
-        query = query.where('end_date', '<=', filters.endDate);
+        query = query.where('campaigns.end_date', '<=', filters.endDate);
       }
 
-      return await query
-        .select('campaigns.*')
+      // Get total count for pagination
+      const countQuery = query.clone().clearSelect().count('campaigns.id as total').first();
+      const { total } = await countQuery as any;
+
+      // Apply sorting
+      const sortBy = filters?.sortBy || 'created_at';
+      const sortOrder = filters?.sortOrder || 'desc';
+      const validSortFields = ['name', 'status', 'start_date', 'end_date', 'created_at', 'updated_at'];
+      const sortField = validSortFields.includes(sortBy) ? `campaigns.${sortBy}` : 'campaigns.created_at';
+      
+      query = query.orderBy(sortField, sortOrder);
+
+      // Apply pagination
+      const page = Math.max(1, filters?.page || 1);
+      const limit = Math.min(100, Math.max(1, filters?.limit || 20)); // Max 100 items per page
+      const offset = (page - 1) * limit;
+
+      const campaigns = await query
+        .select('campaigns.*', 'companies.name as company_name')
         .distinct()
-        .orderBy('campaigns.created_at', 'desc');
+        .limit(limit)
+        .offset(offset);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        campaigns: campaigns.map(campaign => ({
+          ...campaign,
+          company: campaign.company_name ? {
+            id: campaign.company_id,
+            name: campaign.company_name
+          } : undefined
+        })),
+        total: Number(total),
+        page,
+        totalPages
+      };
     } catch (error) {
       throw new Error(`Failed to fetch campaigns: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -354,6 +394,183 @@ export class CampaignModel {
       return result as Record<string, number>;
     } catch (error) {
       throw new Error(`Failed to count campaigns by status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get campaign progress statistics
+   */
+  static async getCampaignProgress(campaignId: number): Promise<{
+    totalImages: number;
+    approvedImages: number;
+    rejectedImages: number;
+    pendingImages: number;
+    progressPercentage: number;
+    assignedContractors: number;
+  }> {
+    try {
+      // Get image statistics
+      const imageStats = await db('images')
+        .select('status')
+        .count('* as count')
+        .where('campaign_id', campaignId)
+        .groupBy('status');
+
+      const stats = {
+        totalImages: 0,
+        approvedImages: 0,
+        rejectedImages: 0,
+        pendingImages: 0,
+        progressPercentage: 0,
+        assignedContractors: 0
+      };
+
+      imageStats.forEach((stat: any) => {
+        const count = Number(stat.count);
+        stats.totalImages += count;
+        
+        switch (stat.status) {
+          case 'approved':
+            stats.approvedImages = count;
+            break;
+          case 'rejected':
+            stats.rejectedImages = count;
+            break;
+          case 'pending':
+            stats.pendingImages = count;
+            break;
+        }
+      });
+
+      // Calculate progress percentage (approved images / total images)
+      if (stats.totalImages > 0) {
+        stats.progressPercentage = Math.round((stats.approvedImages / stats.totalImages) * 100);
+      }
+
+      // Get assigned contractors count
+      const contractorCount = await db(this.ASSIGNMENTS_TABLE)
+        .count('* as count')
+        .where('campaign_id', campaignId)
+        .first();
+
+      stats.assignedContractors = Number(contractorCount?.count || 0);
+
+      return stats;
+    } catch (error) {
+      throw new Error(`Failed to get campaign progress: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get campaigns that should be hidden from clients (completed > 1 month ago)
+   */
+  static async getExpiredCampaignsForClients(): Promise<Campaign[]> {
+    try {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      return await db(this.TABLE_NAME)
+        .where('status', 'completed')
+        .where('completed_at', '<', oneMonthAgo)
+        .orderBy('completed_at', 'desc');
+    } catch (error) {
+      throw new Error(`Failed to get expired campaigns: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get campaigns visible to clients (not completed or completed within last month)
+   */
+  static async findVisibleToClients(companyId: number, filters?: {
+    status?: string;
+    search?: string;
+    startDate?: Date;
+    endDate?: Date;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    limit?: number;
+  }): Promise<{ campaigns: Campaign[]; total: number; page: number; totalPages: number }> {
+    try {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      let query = db(this.TABLE_NAME)
+        .leftJoin('companies', 'campaigns.company_id', 'companies.id')
+        .where('campaigns.company_id', companyId)
+        .where(function() {
+          // Show campaigns that are not completed OR completed within the last month
+          this.where('campaigns.status', '!=', 'completed')
+            .orWhere(function() {
+              this.where('campaigns.status', 'completed')
+                .where('campaigns.completed_at', '>=', oneMonthAgo);
+            });
+        });
+
+      // Apply additional filters
+      if (filters?.status && filters.status !== 'completed') {
+        query = query.where('campaigns.status', filters.status);
+      } else if (filters?.status === 'completed') {
+        // For completed filter, only show those within the last month
+        query = query.where('campaigns.status', 'completed')
+          .where('campaigns.completed_at', '>=', oneMonthAgo);
+      }
+
+      if (filters?.search) {
+        const searchTerm = `%${filters.search}%`;
+        query = query.where(function() {
+          this.where('campaigns.name', 'like', searchTerm)
+            .orWhere('campaigns.description', 'like', searchTerm);
+        });
+      }
+
+      if (filters?.startDate) {
+        query = query.where('campaigns.start_date', '>=', filters.startDate);
+      }
+
+      if (filters?.endDate) {
+        query = query.where('campaigns.end_date', '<=', filters.endDate);
+      }
+
+      // Get total count
+      const countQuery = query.clone().clearSelect().count('campaigns.id as total').first();
+      const { total } = await countQuery as any;
+
+      // Apply sorting
+      const sortBy = filters?.sortBy || 'created_at';
+      const sortOrder = filters?.sortOrder || 'desc';
+      const validSortFields = ['name', 'status', 'start_date', 'end_date', 'created_at', 'updated_at'];
+      const sortField = validSortFields.includes(sortBy) ? `campaigns.${sortBy}` : 'campaigns.created_at';
+      
+      query = query.orderBy(sortField, sortOrder);
+
+      // Apply pagination
+      const page = Math.max(1, filters?.page || 1);
+      const limit = Math.min(100, Math.max(1, filters?.limit || 20));
+      const offset = (page - 1) * limit;
+
+      const campaigns = await query
+        .select('campaigns.*', 'companies.name as company_name')
+        .distinct()
+        .limit(limit)
+        .offset(offset);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        campaigns: campaigns.map(campaign => ({
+          ...campaign,
+          company: campaign.company_name ? {
+            id: campaign.company_id,
+            name: campaign.company_name
+          } : undefined
+        })),
+        total: Number(total),
+        page,
+        totalPages
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch client-visible campaigns: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

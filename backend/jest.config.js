@@ -24,5 +24,10 @@ export default {
     '!src/database/seeds/**'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html']
+  coverageReporters: ['text', 'lcov', 'html'],
+  setupFilesAfterEnv: ['<rootDir>/src/tests/jest.setup.ts'],
+  testTimeout: 30000,
+  maxWorkers: 1, // Run tests sequentially to avoid database conflicts
+  forceExit: true,
+  detectOpenHandles: true
 };

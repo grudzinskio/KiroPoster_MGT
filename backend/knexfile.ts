@@ -58,6 +58,11 @@ const config: { [key: string]: Knex.Config } = {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
+      charset: 'utf8mb4',
+      timezone: 'UTC',
+      ssl: process.env.DB_SSL === 'true' ? {
+        rejectUnauthorized: false
+      } : false,
     },
     migrations: {
       directory: './src/database/migrations',
@@ -68,9 +73,19 @@ const config: { [key: string]: Knex.Config } = {
       extension: 'ts',
     },
     pool: {
-      min: 2,
-      max: 20,
+      min: parseInt(process.env.DB_POOL_MIN || '5'),
+      max: parseInt(process.env.DB_POOL_MAX || '50'),
+      idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '30000'),
+      acquireTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT || '60000'),
+      createTimeoutMillis: 30000,
+      destroyTimeoutMillis: 5000,
+      reapIntervalMillis: 1000,
+      createRetryIntervalMillis: 100,
+      propagateCreateError: false
     },
+    acquireConnectionTimeout: 60000,
+    asyncStackTraces: false,
+    debug: false,
   },
 };
 

@@ -19,11 +19,20 @@ export const securityHeaders = helmet({
     },
   },
   crossOriginEmbedderPolicy: false, // Disable for file uploads
-  hsts: {
+  hsts: process.env.NODE_ENV === 'production' ? {
     maxAge: 31536000, // 1 year
     includeSubDomains: true,
     preload: true
-  }
+  } : false,
+  // Additional production security headers
+  noSniff: true,
+  frameguard: { action: 'deny' },
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  permittedCrossDomainPolicies: false,
+  dnsPrefetchControl: { allow: false },
+  ieNoOpen: true,
+  hidePoweredBy: true
 });
 
 /**

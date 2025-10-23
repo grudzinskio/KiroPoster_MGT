@@ -1,6 +1,6 @@
 export interface User {
   id: number;
-  email: string;
+  username: string;
   passwordHash: string;
   firstName: string;
   lastName: string;
@@ -12,7 +12,7 @@ export interface User {
 }
 
 export interface CreateUserData {
-  email: string;
+  username: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -21,7 +21,7 @@ export interface CreateUserData {
 }
 
 export interface UpdateUserData {
-  email?: string;
+  username?: string;
   firstName?: string;
   lastName?: string;
   role?: 'company_employee' | 'client' | 'contractor';
@@ -30,7 +30,7 @@ export interface UpdateUserData {
 }
 
 export interface LoginCredentials {
-  email: string;
+  username: string;
   password: string;
 }
 

@@ -21,17 +21,17 @@ export class UserModel {
   }
 
   /**
-   * Find user by email
+   * Find user by username
    */
-  static async findByEmail(email: string): Promise<User | null> {
+  static async findByUsername(username: string): Promise<User | null> {
     try {
       const user = await db(this.TABLE_NAME)
-        .where({ email: email.toLowerCase() })
+        .where({ username: username.toLowerCase() })
         .first();
       
       return user || null;
     } catch (error) {
-      throw new Error(`Failed to find user by email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to find user by username: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -64,7 +64,7 @@ export class UserModel {
         query = query.where(function() {
           this.where('firstName', 'like', searchTerm)
             .orWhere('lastName', 'like', searchTerm)
-            .orWhere('email', 'like', searchTerm);
+            .orWhere('username', 'like', searchTerm);
         });
       }
 
@@ -83,7 +83,7 @@ export class UserModel {
       
       const [userId] = await db(this.TABLE_NAME)
         .insert({
-          email: userData.email.toLowerCase(),
+          username: userData.username.toLowerCase(),
           passwordHash: hashedPassword,
           firstName: userData.firstName,
           lastName: userData.lastName,
@@ -102,7 +102,7 @@ export class UserModel {
       return newUser;
     } catch (error) {
       if (error instanceof Error && error.message.includes('Duplicate entry')) {
-        throw new Error('Email address is already in use');
+        throw new Error('Username is already in use');
       }
       throw new Error(`Failed to create user: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -118,9 +118,9 @@ export class UserModel {
         updatedAt: new Date()
       };
 
-      // Convert email to lowercase if provided
-      if (updateFields.email) {
-        updateFields.email = updateFields.email.toLowerCase();
+      // Convert username to lowercase if provided
+      if (updateFields.username) {
+        updateFields.username = updateFields.username.toLowerCase();
       }
 
       const affectedRows = await db(this.TABLE_NAME)
@@ -134,7 +134,7 @@ export class UserModel {
       return await this.findById(id);
     } catch (error) {
       if (error instanceof Error && error.message.includes('Duplicate entry')) {
-        throw new Error('Email address is already in use');
+        throw new Error('Username is already in use');
       }
       throw new Error(`Failed to update user: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

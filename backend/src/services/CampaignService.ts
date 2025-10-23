@@ -30,33 +30,32 @@ export class CampaignService {
   }
 
   /**
-   * Get all campaigns with role-based filtering
+   * Get all campaigns with role-based filtering, pagination, and sorting
    */
   static async getAllCampaigns(
     requestingUserId: number,
     requestingUserRole: string,
     requestingUserCompanyId?: number,
-    filters?: CampaignFilters
-  ): Promise<Campaign[]> {
+    filters?: CampaignFilters & {
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<{ campaigns: Campaign[]; total: number; page: number; totalPages: number }> {
     try {
       let campaignFilters = { ...filters };
 
       // Apply role-based filtering
       switch (requestingUserRole) {
         case 'client':
-          // Clients can only see campaigns from their company
+          // Clients can only see campaigns from their company with 1-month rule
           if (!requestingUserCompanyId) {
             throw new Error('Client users must be associated with a company');
           }
-          campaignFilters.companyId = requestingUserCompanyId;
           
-          // Clients can only see completed campaigns from the last month
-          if (filters?.status === 'completed') {
-            const oneMonthAgo = new Date();
-            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            campaignFilters.startDate = oneMonthAgo;
-          }
-          break;
+          // Use special method for client visibility rules
+          return await CampaignModel.findVisibleToClients(requestingUserCompanyId, campaignFilters);
 
         case 'contractor':
           // Contractors can only see campaigns assigned to them
@@ -329,9 +328,7 @@ export class CampaignService {
       }
 
       const statusStats = await CampaignModel.countByStatus();
-      const allCampaigns = await CampaignModel.findAll();
-      
-      const total = allCampaigns.length;
+      const { campaigns, total } = await CampaignModel.findAll({ limit: 1000 }); // Get all for stats
 
       return {
         total,
@@ -339,6 +336,39 @@ export class CampaignService {
       };
     } catch (error) {
       throw new Error(`Failed to get campaign statistics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get campaign progress statistics
+   */
+  static async getCampaignProgress(
+    campaignId: number,
+    requestingUserId: number,
+    requestingUserRole: string,
+    requestingUserCompanyId?: number
+  ): Promise<{
+    totalImages: number;
+    approvedImages: number;
+    rejectedImages: number;
+    pendingImages: number;
+    progressPercentage: number;
+    assignedContractors: number;
+  }> {
+    try {
+      // Check if user can access this campaign
+      const campaign = await CampaignModel.findById(campaignId);
+      if (!campaign) {
+        throw new Error('Campaign not found');
+      }
+
+      if (!this.canAccessCampaign(campaign, requestingUserId, requestingUserRole, requestingUserCompanyId)) {
+        throw new Error('Insufficient permissions to access this campaign');
+      }
+
+      return await CampaignModel.getCampaignProgress(campaignId);
+    } catch (error) {
+      throw new Error(`Failed to get campaign progress: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

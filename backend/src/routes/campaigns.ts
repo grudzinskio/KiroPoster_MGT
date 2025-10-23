@@ -30,14 +30,14 @@ router.use(authenticate);
 
 /**
  * GET /api/campaigns
- * Get all campaigns with role-based filtering
+ * Get all campaigns with role-based filtering, pagination, and sorting
  */
 router.get('/', validateQuery(campaignFiltersSchema), async (req: Request, res: Response) => {
   try {
     const user = getAuthenticatedUser(req);
     const filters = req.query;
 
-    const campaigns = await CampaignService.getAllCampaigns(
+    const result = await CampaignService.getAllCampaigns(
       user.id,
       user.role,
       user.companyId,
@@ -46,7 +46,13 @@ router.get('/', validateQuery(campaignFiltersSchema), async (req: Request, res: 
 
     res.json({
       success: true,
-      data: campaigns
+      data: result.campaigns,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+        limit: filters.limit || 20
+      }
     });
   } catch (error) {
     res.status(400).json({
@@ -81,6 +87,37 @@ router.get('/stats', async (req: Request, res: Response) => {
       success: false,
       error: {
         message: error instanceof Error ? error.message : 'Failed to fetch campaign statistics'
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/campaigns/:id/progress
+ * Get campaign progress statistics
+ */
+router.get('/:id/progress', validateParams(campaignIdSchema), async (req: Request, res: Response) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    const campaignId = parseInt(req.params.id);
+
+    const progress = await CampaignService.getCampaignProgress(
+      campaignId,
+      user.id,
+      user.role,
+      user.companyId
+    );
+
+    res.json({
+      success: true,
+      data: progress
+    });
+  } catch (error) {
+    const statusCode = error instanceof Error && error.message.includes('permissions') ? 403 : 400;
+    res.status(statusCode).json({
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to fetch campaign progress'
       }
     });
   }

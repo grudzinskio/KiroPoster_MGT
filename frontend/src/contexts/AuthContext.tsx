@@ -16,11 +16,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!user && !!token;
 
-  useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
-
-  const initializeAuth = async () => {
+  const initializeAuth = React.useCallback(async () => {
     try {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
@@ -48,7 +44,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {

@@ -1,0 +1,27 @@
+# Development override for docker-compose
+# This file is automatically loaded in development
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      target: development
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+      - LOG_CONSOLE=true
+    volumes:
+      - ./backend/src:/app/backend/src
+      - ./frontend/src:/app/frontend/src
+    command: npm run dev
+
+  database:
+    environment:
+      - MYSQL_DATABASE=poster_campaign_development
+    ports:
+      - "3307:3306"
+
+  nginx:
+    ports:
+      - "8080:80"

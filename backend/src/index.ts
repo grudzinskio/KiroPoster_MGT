@@ -51,12 +51,17 @@ app.use(cookieParser());
 app.use(sanitizeInput);
 
 // Logging
+import { logger, requestLogger } from './config/logger.js';
+import { metricsMiddleware, healthCheckHandler, metricsHandler, startMonitoring } from './middleware/monitoring.js';
+
+// Request logging and metrics
+app.use(requestLogger);
+app.use(metricsMiddleware);
 app.use(morgan('combined'));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+// Health check and metrics endpoints
+app.get('/health', healthCheckHandler);
+app.get('/metrics', metricsHandler);
 
 // Import routes
 import companyRoutes from './routes/companies.js';
@@ -99,6 +104,12 @@ app.listen(PORT, () => {
   console.log(`📦 Environment: ${config.nodeEnv}`);
   console.log(`🌐 Frontend URL: ${config.frontendUrl}`);
   console.log(`🔒 Security middleware enabled`);
+  
+  // Start monitoring in production
+  if (config.nodeEnv === 'production') {
+    startMonitoring();
+    logger.info('Production monitoring started');
+  }
 });
 
 export default app;

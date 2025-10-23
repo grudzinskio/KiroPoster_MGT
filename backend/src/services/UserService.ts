@@ -5,11 +5,11 @@ import { generateTokenPair, TokenPair } from '../utils/jwt.js';
 
 export class UserService {
   /**
-   * Authenticate user with email and password
+   * Authenticate user with username and password
    */
   static async authenticate(credentials: LoginCredentials): Promise<{ user: AuthenticatedUser; tokens: TokenPair } | null> {
     try {
-      const user = await UserModel.findByEmail(credentials.email);
+      const user = await UserModel.findByUsername(credentials.username);
       
       if (!user || !user.isActive) {
         return null;
@@ -51,11 +51,11 @@ export class UserService {
   }
 
   /**
-   * Get user by email (without password hash)
+   * Get user by username (without password hash)
    */
-  static async getUserByEmail(email: string): Promise<AuthenticatedUser | null> {
+  static async getUserByUsername(username: string): Promise<AuthenticatedUser | null> {
     try {
-      const user = await UserModel.findByEmail(email);
+      const user = await UserModel.findByUsername(username);
       
       if (!user) {
         return null;
@@ -63,7 +63,7 @@ export class UserService {
 
       return UserModel.toAuthenticatedUser(user);
     } catch (error) {
-      throw new Error(`Failed to get user by email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to get user by username: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -89,10 +89,10 @@ export class UserService {
    */
   static async createUser(userData: CreateUserData): Promise<AuthenticatedUser> {
     try {
-      // Validate that email is not already in use
-      const existingUser = await UserModel.findByEmail(userData.email);
+      // Validate that username is not already in use
+      const existingUser = await UserModel.findByUsername(userData.username);
       if (existingUser) {
-        throw new Error('Email address is already in use');
+        throw new Error('Username is already in use');
       }
 
       // For client and contractor roles, companyId is required
@@ -137,11 +137,11 @@ export class UserService {
         }
       }
 
-      // Validate email uniqueness if email is being updated
-      if (updateData.email && updateData.email !== existingUser.email) {
-        const emailExists = await UserModel.findByEmail(updateData.email);
-        if (emailExists) {
-          throw new Error('Email address is already in use');
+      // Validate username uniqueness if username is being updated
+      if (updateData.username && updateData.username !== existingUser.username) {
+        const usernameExists = await UserModel.findByUsername(updateData.username);
+        if (usernameExists) {
+          throw new Error('Username is already in use');
         }
       }
 

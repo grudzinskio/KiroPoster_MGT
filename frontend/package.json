@@ -10,10 +10,16 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:components": "vitest run --reporter=verbose src/components",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run src/components/**/*.integration.test.tsx",
+    "build:prod": "NODE_ENV=production npm run build",
+    "preview:prod": "npm run build:prod && npm run preview"
   },
   "dependencies": {
     "axios": "^1.12.2",
+    "lucide-react": "^0.546.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.2"
